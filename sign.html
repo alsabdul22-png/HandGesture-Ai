@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Language - Buchstaben Erkennung</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            max-width: 900px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1em;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .video-section {
+            text-align: center;
+        }
+        
+        .canvas-wrapper {
+            position: relative;
+            width: 100%;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            overflow: hidden;
+            background: black;
+            aspect-ratio: 1;
+        }
+        
+        video {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+        
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .output-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .output-box {
+            background: #f8f9fa;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .output-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+        
+        #recognized {
+            font-size: 3em;
+            font-weight: bold;
+            color: #667eea;
+            text-align: center;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 5px;
+        }
+        
+        #recognized.bounce {
+            animation: bounce 0.6s ease;
+        }
+        
+        #recognized.shake {
+            animation: shake 0.5s ease;
+        }
+        
+        #recognized.spin {
+            animation: spin 0.6s ease;
+        }
+        
+        #recognized.pulse {
+            animation: pulse 0.6s ease;
+        }
+        
+        #recognized.flip {
+            animation: flip 0.6s ease;
+        }
+        
+        #recognized.slide {
+            animation: slide 0.6s ease;
+        }
+        
+        #recognized.tada {
+            animation: tada 0.6s ease;
+        }
+        
+        @keyframes bounce {
+            0% { transform: translateY(0); }
+            25% { transform: translateY(-30px); }
+            50% { transform: translateY(0); }
+            75% { transform: translateY(-15px); }
+            100% { transform: translateY(0); }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            20%, 40%, 60%, 80% { transform: translateX(10px); }
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes flip {
+            0% { transform: rotateY(0); }
+            50% { transform: rotateY(90deg); }
+            100% { transform: rotateY(0); }
+        }
+        
+        @keyframes slide {
+            0% { transform: translateX(-50px); opacity: 0; }
+            50% { transform: translateX(10px); }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes tada {
+            0% { transform: rotate(0deg) scale(1); }
+            10% { transform: rotate(-3deg) scale(0.9); }
+            20% { transform: rotate(3deg) scale(1.1); }
+            30% { transform: rotate(-3deg) scale(0.9); }
+            40% { transform: rotate(3deg) scale(1.1); }
+            50% { transform: rotate(-3deg) scale(0.9); }
+            60% { transform: rotate(3deg) scale(1.1); }
+            70% { transform: rotate(-3deg) scale(0.9); }
+            80% { transform: rotate(3deg) scale(1.1); }
+            90% { transform: rotate(-3deg) scale(0.9); }
+            100% { transform: rotate(0deg) scale(1); }
+        }
+        
+        #text-output {
+            font-size: 1.2em;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            min-height: 80px;
+            word-wrap: break-word;
+            border: 1px solid #ddd;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        #startBtn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        #stopBtn {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        #clearBtn {
+            background: #ffd93d;
+            color: #333;
+        }
+        
+        .alphabet {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+        }
+        
+        .alphabet-btn {
+            padding: 8px;
+            font-size: 0.9em;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .alphabet-btn:hover {
+            border-color: #667eea;
+            background: #f0f0f0;
+        }
+        
+        .alphabet-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .status {
+            text-align: center;
+            font-size: 1em;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        
+        .status.info {
+            background: #e3f2fd;
+            color: #667eea;
+        }
+        
+        .status.active {
+            background: #c8e6c9;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        
+        .status.error {
+            background: #ffcdd2;
+            color: #c62828;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 800px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+            
+            #recognized {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✋ Sign Language</h1>
+        <p class="subtitle">Erkenne Handbuchstaben</p>
+        
+        <div class="controls">
+            <button id="startBtn">▶ START</button>
+            <button id="stopBtn" disabled>⏹ STOP</button>
+            <button id="clearBtn" disabled>🗑 TEXT LÖSCHEN</button>
+        </div>
+        
+        <div class="content">
+            <div class="video-section">
+                <div class="canvas-wrapper">
+                    <video id="video" autoplay></video>
+                    <canvas id="canvas"></canvas>
+                </div>
+            </div>
+            
+            <div class="output-section">
+                <div class="output-box">
+                    <h3>Erkannter Buchstabe</h3>
+                    <div id="recognized">-</div>
+                </div>
+                
+                <div class="output-box">
+                    <h3>Dein Text</h3>
+                    <div id="text-output"></div>
+                </div>
+                
+                <div class="output-box">
+                    <h3>Verfügbare Buchstaben</h3>
+                    <div class="alphabet" id="alphabet"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status info" id="status">Klick START</div>
+    </div>
+
+    <!-- TensorFlow.js und HandPose -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose@0.0.7"></script>
+
+    <script>
+        class SignLanguageApp {
+            constructor() {
+                this.video = document.getElementById('video');
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                
+                this.active = false;
+                this.model = null;
+                this.text = '';
+                
+                // Buchstaben die wir erkennen können
+                this.letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+                               'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+                               'U', 'V', 'W', 'X', 'Y', 'Z'];
+                
+                this.lastRecognized = '';
+                this.recognitionCount = 0; // Zähler für kontinuierliche Erkennung
+                
+                // 3 Sekunden = 90 Frames (bei ~30FPS)
+                this.requiredFrames = 90;
+                
+                this.setupListeners();
+                this.setupCanvas();
+                this.createAlphabet();
+            }
+            
+            setupListeners() {
+                document.getElementById('startBtn').onclick = () => this.start();
+                document.getElementById('stopBtn').onclick = () => this.stop();
+                document.getElementById('clearBtn').onclick = () => this.clearText();
+            }
+            
+            setupCanvas() {
+                this.video.onloadedmetadata = () => {
+                    this.canvas.width = this.video.videoWidth;
+                    this.canvas.height = this.video.videoHeight;
+                };
+            }
+            
+            createAlphabet() {
+                const alphabet = document.getElementById('alphabet');
+                this.letters.forEach(letter => {
+                    const btn = document.createElement('button');
+                    btn.className = 'alphabet-btn';
+                    btn.textContent = letter;
+                    btn.onclick = () => this.addLetter(letter);
+                    alphabet.appendChild(btn);
+                });
+            }
+            
+            status(msg, type = 'info') {
+                const s = document.getElementById('status');
+                s.textContent = msg;
+                s.className = 'status ' + type;
+            }
+            
+            async start() {
+                try {
+                    this.status('Starte Webcam...', 'info');
+                    
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    this.video.srcObject = stream;
+                    
+                    await new Promise(resolve => {
+                        this.video.onloadedmetadata = () => {
+                            this.video.play();
+                            resolve();
+                        };
+                    });
+                    
+                    this.status('Lade Hand-Modell...', 'info');
+                    
+                    if (!this.model) {
+                        this.model = await handpose.load();
+                    }
+                    
+                    this.active = true;
+                    this.status('✓ AKTIV - Zeige deine Handgesten!', 'active');
+                    
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                    document.getElementById('clearBtn').disabled = false;
+                    
+                    this.run();
+                    
+                } catch (e) {
+                    this.status('FEHLER: ' + e.message, 'error');
+                    this.stop();
+                }
+            }
+            
+            async run() {
+                if (!this.active) return;
+                
+                try {
+                    const predictions = await this.model.estimateHands(this.video, true);
+                    
+                    if (predictions.length > 0) {
+                        const hand = predictions[0];
+                        const landmarks = hand.landmarks;
+                        
+                        // Erkenne Buchstabe aus Handpose
+                        const letter = this.recognizeLetter(landmarks);
+                        
+                        if (letter) {
+                            if (letter === this.lastRecognized) {
+                                this.recognitionCount++;
+                                // Nach 90 Frames (ca. 3 Sekunden) als neuer Buchstabe hinzufügen
+                                if (this.recognitionCount > this.requiredFrames) {
+                                    this.addLetter(letter);
+                                    this.recognitionCount = 0;
+                                    this.lastRecognized = '';
+                                }
+                            } else {
+                                this.lastRecognized = letter;
+                                this.recognitionCount = 0;
+                            }
+                            
+                            // Zeige Erkennungs-Fortschritt
+                            const progress = Math.min(100, Math.round((this.recognitionCount / this.requiredFrames) * 100));
+                            const recognized = document.getElementById('recognized');
+                            recognized.textContent = letter + '\n(' + progress + '%)';
+                        } else {
+                            document.getElementById('recognized').textContent = '-';
+                        }
+                        
+                        // Zeichne Hand
+                        this.drawHand(landmarks);
+                    } else {
+                        document.getElementById('recognized').textContent = '-';
+                    }
+                } catch (e) {
+                    console.error('Error:', e);
+                }
+                
+                requestAnimationFrame(() => this.run());
+            }
+            
+            recognizeLetter(landmarks) {
+                // ASL Alphabet Erkennung basierend auf Finger-Positionen
+                
+                const thumbTip = landmarks[4];
+                const thumbMid = landmarks[3];
+                const thumbBase = landmarks[2];
+                
+                const indexTip = landmarks[8];
+                const indexMid = landmarks[7];
+                const indexBase = landmarks[6];
+                
+                const middleTip = landmarks[12];
+                const middleMid = landmarks[11];
+                const middleBase = landmarks[10];
+                
+                const ringTip = landmarks[16];
+                const ringMid = landmarks[15];
+                const ringBase = landmarks[14];
+                
+                const pinkyTip = landmarks[20];
+                const pinkyMid = landmarks[19];
+                const pinkyBase = landmarks[18];
+                
+                const palmBase = landmarks[0];
+                
+                // Helper: Abstand zwischen zwei Punkten
+                const dist = (p1, p2) => {
+                    return Math.sqrt(Math.pow(p1[0] - p2[0], 2) + Math.pow(p1[1] - p2[1], 2));
+                };
+                
+                // Helper: Ist Finger ausgestreckt nach oben?
+                const isFingerUp = (tip, base) => tip[1] < base[1] - 0.08;
+                
+                // Helper: Ist Finger nach unten/eingeklappt?
+                const isFingerDown = (tip, base) => tip[1] >= base[1] - 0.03;
+                
+                // Helper: Sind zwei Finger nah beieinander?
+                const areFingersTogether = (tip1, tip2, maxDist = 0.04) => {
+                    return dist(tip1, tip2) < maxDist;
+                };
+                
+                // Finger-Status
+                const thumbUp = isFingerUp(thumbTip, thumbBase);
+                const indexUp = isFingerUp(indexTip, indexBase);
+                const middleUp = isFingerUp(middleTip, middleBase);
+                const ringUp = isFingerUp(ringTip, ringBase);
+                const pinkyUp = isFingerUp(pinkyTip, pinkyBase);
+                
+                // Abstände
+                const indexMiddleDist = dist(indexTip, middleTip);
+                const indexThumbDist = dist(indexTip, thumbTip);
+                const middleThumbDist = dist(middleTip, thumbTip);
+                
+                // A: Faust mit Daumen seitlich
+                if (!indexUp && !middleUp && !ringUp && !pinkyUp && thumbTip[0] < indexBase[0]) {
+                    return 'A';
+                }
+                
+                // B: Offene Hand - alle Finger oben, zusammen
+                if (indexUp && middleUp && ringUp && pinkyUp && indexMiddleDist < 0.05) {
+                    return 'B';
+                }
+                
+                // C: C-Form - Daumen und Zeigefinger weit auseinander
+                if (indexUp && !middleUp && !ringUp && !pinkyUp && indexThumbDist > 0.12) {
+                    return 'C';
+                }
+                
+                // D: Ein Finger (Mittelfinger) oben, Rest unten
+                if (!indexUp && middleUp && !ringUp && !pinkyUp) {
+                    return 'D';
+                }
+                
+                // E: Ähnlich wie A aber Finger leicht gebeugt
+                if (!indexUp && !middleUp && !ringUp && !pinkyUp && thumbTip[0] > indexBase[0]) {
+                    return 'E';
+                }
+                
+                // F: Zeige- und Mittelfinger oben mit Daumen dazwischen
+                if (indexUp && middleUp && !ringUp && !pinkyUp && !thumbUp) {
+                    return 'F';
+                }
+                
+                // G: Nur Zeigefinger oben, nach der Seite
+                if (indexUp && !middleUp && !ringUp && !pinkyUp && indexTip[0] > indexBase[0] + 0.05) {
+                    return 'G';
+                }
+                
+                // H: Zeige- und Mittelfinger oben, nebeneinander, gerade
+                if (indexUp && middleUp && !ringUp && !pinkyUp && indexTip[0] > indexBase[0] - 0.05 && indexTip[0] < indexBase[0] + 0.05) {
+                    return 'H';
+                }
+                
+                // I: Nur Kleiner Finger oben
+                if (!indexUp && !middleUp && !ringUp && pinkyUp && !thumbUp) {
+                    return 'I';
+                }
+                
+                // J: Kleiner Finger oben, nach unten hängend
+                if (!indexUp && !middleUp && !ringUp && pinkyUp && pinkyTip[1] > pinkyBase[1]) {
+                    return 'J';
+                }
+                
+                // K: Zeigefinger und Mittelfinger oben, Daumen nach oben
+                if (indexUp && middleUp && !ringUp && !pinkyUp && thumbUp) {
+                    return 'K';
+                }
+                
+                // L: Daumen und Zeigefinger in L-Form (senkrecht)
+                if (thumbUp && indexUp && !middleUp && !ringUp && !pinkyUp) {
+                    return 'L';
+                }
+                
+                // M: Drei Finger unten/gebeugt mit Daumen versteckt
+                if (!indexUp && !middleUp && ringUp && pinkyUp && !thumbUp) {
+                    return 'M';
+                }
+                
+                // N: Zwei Finger (unten/gebeugt) mit Daumen versteckt
+                if (!indexUp && !middleUp && ringUp && pinkyUp && thumbTip[1] > thumbBase[1]) {
+                    return 'N';
+                }
+                
+                // O: O-Form - Daumen und Zeigefinger zusammen
+                if (areFingersTogether(thumbTip, indexTip, 0.05) && !middleUp && !ringUp && !pinkyUp) {
+                    return 'O';
+                }
+                
+                // P: Ähnlich wie K aber mit bestimmter Orientierung
+                if (indexUp && middleUp && !ringUp && !pinkyUp && indexTip[1] > middleTip[1]) {
+                    return 'P';
+                }
+                
+                // Q: G aber mit Daumen nach unten
+                if (indexUp && !middleUp && !ringUp && !pinkyUp && !thumbUp && indexTip[0] > indexBase[0] + 0.05) {
+                    return 'Q';
+                }
+                
+                // R: Zeige- und Mittelfinger gekreuzt
+                if (indexUp && middleUp && !ringUp && !pinkyUp) {
+                    const xDist = Math.abs(indexTip[0] - middleTip[0]);
+                    const yDist = Math.abs(indexTip[1] - middleTip[1]);
+                    if (xDist > 0.05 && yDist > 0.05) {
+                        return 'R';
+                    }
+                }
+                
+                // S: Faust
+                if (!indexUp && !middleUp && !ringUp && !pinkyUp && !thumbUp) {
+                    return 'S';
+                }
+                
+                // T: Daumen zwischen Zeige- und Mittelfinger
+                if (!indexUp && !middleUp && !ringUp && !pinkyUp && thumbTip[1] < thumbBase[1]) {
+                    return 'T';
+                }
+                
+                // U: Zeige- und Mittelfinger oben, zusammen, nach oben
+                if (indexUp && middleUp && !ringUp && !pinkyUp && areFingersTogether(indexTip, middleTip, 0.05)) {
+                    return 'U';
+                }
+                
+                // V: Zeige- und Mittelfinger oben, auseinander (V-Form)
+                if (indexUp && middleUp && !ringUp && !pinkyUp && !areFingersTogether(indexTip, middleTip, 0.05)) {
+                    return 'V';
+                }
+                
+                // W: Mittelfinger, Ring- und Kleiner Finger oben
+                if (!indexUp && middleUp && ringUp && pinkyUp) {
+                    return 'W';
+                }
+                
+                // X: Zeigefinger gebogen (X gestures)
+                if (indexUp && !middleUp && !ringUp && !pinkyUp && indexTip[0] < indexMid[0]) {
+                    return 'X';
+                }
+                
+                // Y: Daumen und Kleiner Finger oben, Rest unten
+                if (thumbUp && !indexUp && !middleUp && !ringUp && pinkyUp) {
+                    return 'Y';
+                }
+                
+                // Z: Zeigefinger macht Z-Movement (diagonal)
+                if (indexUp && !middleUp && !ringUp && !pinkyUp && indexMid[1] < indexBase[1]) {
+                    return 'Z';
+                }
+                
+                return null;
+            }
+            
+            drawHand(landmarks) {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw points
+                landmarks.forEach(([x, y]) => {
+                    this.ctx.fillStyle = 'rgba(102,126,234,0.6)';
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, 5, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+                
+                // Draw connections
+                const connections = [
+                    [0, 1], [1, 2], [2, 3], [3, 4],
+                    [5, 6], [6, 7], [7, 8],
+                    [9, 10], [10, 11], [11, 12],
+                    [13, 14], [14, 15], [15, 16],
+                    [17, 18], [18, 19], [19, 20],
+                    [0, 5], [5, 9], [9, 13], [13, 17]
+                ];
+                
+                this.ctx.strokeStyle = 'rgba(102,126,234,0.4)';
+                this.ctx.lineWidth = 2;
+                connections.forEach(([i, j]) => {
+                    const [x1, y1] = landmarks[i];
+                    const [x2, y2] = landmarks[j];
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x1, y1);
+                    this.ctx.lineTo(x2, y2);
+                    this.ctx.stroke();
+                });
+            }
+            
+            addLetter(letter) {
+                this.text += letter;
+                document.getElementById('text-output').textContent = this.text;
+                
+                // Spiele Animation ab
+                this.playAnimation(letter);
+                
+                // Highlight alphabet button
+                document.querySelectorAll('.alphabet-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelectorAll('.alphabet-btn').forEach(btn => {
+                    if (btn.textContent === letter) {
+                        btn.classList.add('active');
+                    }
+                });
+            }
+            
+            playAnimation(letter) {
+                const recognized = document.getElementById('recognized');
+                const animations = ['bounce', 'shake', 'spin', 'pulse', 'flip', 'slide', 'tada'];
+                
+                // Verschiedene Animationen für verschiedene Buchstaben
+                const animationMap = {
+                    'A': 'bounce',
+                    'B': 'shake',
+                    'C': 'pulse',
+                    'D': 'spin',
+                    'E': 'flip',
+                    'F': 'slide',
+                    'G': 'tada',
+                    'H': 'bounce',
+                    'I': 'pulse',
+                    'J': 'shake',
+                    'K': 'spin',
+                    'L': 'flip',
+                    'M': 'slide',
+                    'N': 'tada',
+                    'O': 'bounce',
+                    'P': 'shake',
+                    'Q': 'pulse',
+                    'R': 'spin',
+                    'S': 'flip',
+                    'T': 'slide',
+                    'U': 'tada',
+                    'V': 'bounce',
+                    'W': 'shake',
+                    'X': 'pulse',
+                    'Y': 'spin',
+                    'Z': 'flip'
+                };
+                
+                // Entferne alle Animator-Klassen
+                animations.forEach(anim => recognized.classList.remove(anim));
+                
+                // Füge die passende Animation hinzu
+                const animation = animationMap[letter] || animations[Math.floor(Math.random() * animations.length)];
+                recognized.classList.add(animation);
+                
+                // Entferne die Animation nach dem Ende, damit sie wieder gespielt werden kann
+                setTimeout(() => {
+                    recognized.classList.remove(animation);
+                }, 600);
+            }
+            
+            clearText() {
+                this.text = '';
+                document.getElementById('text-output').textContent = '';
+                document.getElementById('recognized').textContent = '-';
+                document.querySelectorAll('.alphabet-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                this.status('✓ Text gelöscht', 'active');
+            }
+            
+            stop() {
+                this.active = false;
+                
+                if (this.video.srcObject) {
+                    this.video.srcObject.getTracks().forEach(t => t.stop());
+                }
+                
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('clearBtn').disabled = true;
+                
+                this.status('Gestoppt', 'info');
+            }
+        }
+        
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new SignLanguageApp();
+        });
+    </script>
+</body>
+</html>

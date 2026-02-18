@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Language AI - Genaue Erkennung</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            max-width: 900px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1em;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .video-section {
+            text-align: center;
+        }
+        
+        .canvas-wrapper {
+            position: relative;
+            width: 100%;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            overflow: hidden;
+            background: black;
+            aspect-ratio: 1;
+        }
+        
+        video {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+        
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .output-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .output-box {
+            background: #f8f9fa;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .output-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+        
+        #recognized {
+            font-size: 4em;
+            font-weight: bold;
+            color: #667eea;
+            text-align: center;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 5px;
+        }
+        
+        #confidence {
+            font-size: 1em;
+            color: #999;
+            margin-top: 10px;
+        }
+        
+        #recognized.bounce {
+            animation: bounce 0.6s ease;
+        }
+        
+        #recognized.shake {
+            animation: shake 0.5s ease;
+        }
+        
+        #recognized.spin {
+            animation: spin 0.6s ease;
+        }
+        
+        #recognized.pulse {
+            animation: pulse 0.6s ease;
+        }
+        
+        #recognized.flip {
+            animation: flip 0.6s ease;
+        }
+        
+        #recognized.slide {
+            animation: slide 0.6s ease;
+        }
+        
+        #recognized.tada {
+            animation: tada 0.6s ease;
+        }
+        
+        @keyframes bounce {
+            0% { transform: translateY(0); }
+            25% { transform: translateY(-30px); }
+            50% { transform: translateY(0); }
+            75% { transform: translateY(-15px); }
+            100% { transform: translateY(0); }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            20%, 40%, 60%, 80% { transform: translateX(10px); }
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes flip {
+            0% { transform: rotateY(0); }
+            50% { transform: rotateY(90deg); }
+            100% { transform: rotateY(0); }
+        }
+        
+        @keyframes slide {
+            0% { transform: translateX(-50px); opacity: 0; }
+            50% { transform: translateX(10px); }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes tada {
+            0% { transform: rotate(0deg) scale(1); }
+            10% { transform: rotate(-3deg) scale(0.9); }
+            20% { transform: rotate(3deg) scale(1.1); }
+            30% { transform: rotate(-3deg) scale(0.9); }
+            40% { transform: rotate(3deg) scale(1.1); }
+            50% { transform: rotate(-3deg) scale(0.9); }
+            60% { transform: rotate(3deg) scale(1.1); }
+            70% { transform: rotate(-3deg) scale(0.9); }
+            80% { transform: rotate(3deg) scale(1.1); }
+            90% { transform: rotate(-3deg) scale(0.9); }
+            100% { transform: rotate(0deg) scale(1); }
+        }
+        
+        #text-output {
+            font-size: 1.2em;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            min-height: 80px;
+            word-wrap: break-word;
+            border: 1px solid #ddd;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.1s;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        #startBtn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        #stopBtn {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        #clearBtn {
+            background: #ffd93d;
+            color: #333;
+        }
+        
+        .status {
+            text-align: center;
+            font-size: 1em;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        
+        .status.info {
+            background: #e3f2fd;
+            color: #667eea;
+        }
+        
+        .status.active {
+            background: #c8e6c9;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        
+        .status.error {
+            background: #ffcdd2;
+            color: #c62828;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 800px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+            
+            #recognized {
+                font-size: 2.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Sign Language AI</h1>
+        <p class="subtitle">KI-gestützte Gebärdensprachen-Erkennung</p>
+        
+        <div class="controls">
+            <button id="startBtn">▶ START</button>
+            <button id="stopBtn" disabled>⏹ STOP</button>
+            <button id="clearBtn" disabled>🗑 TEXT LÖSCHEN</button>
+        </div>
+        
+        <div class="content">
+            <div class="video-section">
+                <div class="canvas-wrapper">
+                    <video id="video" autoplay></video>
+                    <canvas id="canvas"></canvas>
+                </div>
+            </div>
+            
+            <div class="output-section">
+                <div class="output-box">
+                    <h3>KI Erkennung</h3>
+                    <div id="recognized">-</div>
+                    <div id="confidence"></div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+                
+                <div class="output-box">
+                    <h3>Dein Text</h3>
+                    <div id="text-output"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status info" id="status">Klick START</div>
+    </div>
+
+    <!-- MediaPipe Solutions -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0"></script>
+
+    <script>
+        class SignLanguageAI {
+            constructor() {
+                this.video = document.getElementById('video');
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                
+                this.active = false;
+                this.handLandmarker = null;
+                this.text = '';
+                
+                this.lastLetter = '';
+                this.holdingCount = 0;
+                this.requiredHolds = 90; // 3 sekunden
+                
+                this.setupListeners();
+                this.setupCanvas();
+            }
+            
+            setupListeners() {
+                document.getElementById('startBtn').onclick = () => this.start();
+                document.getElementById('stopBtn').onclick = () => this.stop();
+                document.getElementById('clearBtn').onclick = () => this.clearText();
+            }
+            
+            setupCanvas() {
+                this.video.onloadedmetadata = () => {
+                    this.canvas.width = this.video.videoWidth;
+                    this.canvas.height = this.video.videoHeight;
+                };
+            }
+            
+            status(msg, type = 'info') {
+                const s = document.getElementById('status');
+                s.textContent = msg;
+                s.className = 'status ' + type;
+            }
+            
+            async start() {
+                try {
+                    this.status('Starte Webcam...', 'info');
+                    
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    this.video.srcObject = stream;
+                    
+                    await new Promise(resolve => {
+                        this.video.onloadedmetadata = () => {
+                            this.video.play();
+                            resolve();
+                        };
+                    });
+                    
+                    this.status('Lade KI-Modell (MediaPipe)...', 'info');
+                    
+                    // Lade MediaPipe HandLandmarker
+                    const vision = await Mediapipe.FilesetResolver.forVisionTasks(
+                        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+                    );
+                    
+                    this.handLandmarker = await Mediapipe.HandLandmarker.createFromOptions(vision, {
+                        baseOptions: {
+                            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
+                        },
+                        runningMode: "VIDEO",
+                        numHands: 2,
+                        minHandDetectionConfidence: 0.7,
+                        minHandPresenceConfidence: 0.7,
+                        minTrackingConfidence: 0.7
+                    });
+                    
+                    this.active = true;
+                    this.status('✓ KI-System aktiv! Zeige deine Handbuchstaben!', 'active');
+                    
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                    document.getElementById('clearBtn').disabled = false;
+                    
+                    this.run();
+                    
+                } catch (e) {
+                    this.status('FEHLER: ' + e.message, 'error');
+                    console.error(e);
+                    this.stop();
+                }
+            }
+            
+            async run() {
+                if (!this.active) return;
+                
+                try {
+                    if (this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
+                        const results = this.handLandmarker.detectForVideo(
+                            this.video, 
+                            performance.now()
+                        );
+                        
+                        if (results.landmarks && results.landmarks.length > 0) {
+                            const hand = results.landmarks[0];
+                            const letter = this.recognizeLetter(hand);
+                            
+                            if (letter) {
+                                if (letter === this.lastLetter) {
+                                    this.holdingCount++;
+                                    const progress = Math.min(100, Math.round((this.holdingCount / this.requiredHolds) * 100));
+                                    
+                                    document.getElementById('recognized').textContent = letter;
+                                    document.getElementById('confidence').textContent = progress + '%';
+                                    document.getElementById('progressFill').style.width = progress + '%';
+                                    
+                                    if (this.holdingCount >= this.requiredHolds) {
+                                        this.addLetter(letter);
+                                        this.holdingCount = 0;
+                                        this.lastLetter = '';
+                                    }
+                                } else {
+                                    this.lastLetter = letter;
+                                    this.holdingCount = 0;
+                                    document.getElementById('recognized').textContent = letter;
+                                    document.getElementById('confidence').textContent = '0%';
+                                    document.getElementById('progressFill').style.width = '0%';
+                                }
+                            } else {
+                                document.getElementById('recognized').textContent = '?';
+                                document.getElementById('confidence').textContent = 'Erkannt nicht';
+                                document.getElementById('progressFill').style.width = '0%';
+                            }
+                            
+                            // Zeichne Hand
+                            this.drawHand(hand);
+                        } else {
+                            document.getElementById('recognized').textContent = '-';
+                            document.getElementById('confidence').textContent = 'Keine Hand';
+                            document.getElementById('progressFill').style.width = '0%';
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error:', e);
+                }
+                
+                requestAnimationFrame(() => this.run());
+            }
+            
+            recognizeLetter(landmarks) {
+                // Finger-Indizes in MediaPipe
+                const thumb = landmarks[4];
+                const index = landmarks[8];
+                const middle = landmarks[12];
+                const ring = landmarks[16];
+                const pinky = landmarks[20];
+                
+                const thumbBase = landmarks[2];
+                const indexBase = landmarks[6];
+                const middleBase = landmarks[10];
+                const ringBase = landmarks[14];
+                const pinkyBase = landmarks[18];
+                
+                const wrist = landmarks[0];
+                
+                const dist = (p1, p2) => {
+                    const dx = p1.x - p2.x;
+                    const dy = p1.y - p2.y;
+                    const dz = (p1.z || 0) - (p2.z || 0);
+                    return Math.sqrt(dx*dx + dy*dy + dz*dz);
+                };
+                
+                const fingerUp = (tip, base) => tip.y < base.y - 0.08;
+                const fingersClose = (t1, t2, maxDist = 0.08) => dist(t1, t2) < maxDist;
+                
+                const tUp = fingerUp(thumb, thumbBase);
+                const iUp = fingerUp(index, indexBase);
+                const mUp = fingerUp(middle, middleBase);
+                const rUp = fingerUp(ring, ringBase);
+                const pUp = fingerUp(pinky, pinkyBase);
+                
+                const iMDist = dist(index, middle);
+                const iTDist = dist(index, thumb);
+                const mTDist = dist(middle, thumb);
+                
+                // ASL Gestenerkennungslogik (verbessert)
+                
+                if (!iUp && !mUp && !rUp && !pUp) return 'A'; // Faust
+                
+                if (iUp && mUp && rUp && pUp && iMDist < 0.08) return 'B'; // Flache Hand
+                
+                if (!iUp && mUp && rUp && pUp) return 'D'; // D-Geste
+                
+                if (iUp && mUp && !rUp && !pUp && iMDist > 0.06) return 'V'; // V-Form
+                
+                if (iUp && mUp && !rUp && !pUp && fingersClose(index, middle, 0.04)) return 'H'; // H-Geste
+                
+                if (iUp && !mUp && !rUp && pUp) return 'I'; // I-Geste
+                
+                if (!iUp && !mUp && !rUp && pUp && !tUp) return 'I'; // I-Geste
+                
+                if (iUp && !mUp && !rUp && !pUp) return 'L'; // L-Geste
+                
+                if (!iUp && !mUp && !rUp && !pUp && tUp) return 'O'; // O-Geste
+                
+                if (tUp && iUp && mUp && !rUp && !pUp) return 'K'; // K-Geste
+                
+                if (!iUp && mUp && rUp && pUp) return 'W'; // W-Geste
+                
+                if (tUp && !iUp && !mUp && !rUp && pUp) return 'Y'; // Y-Geste
+                
+                if (iUp && mUp && rUp && !pUp) return 'E'; // E-Geste
+                
+                if (iUp && !mUp && !rUp && pUp && tUp) return 'G'; // G-Geste
+                
+                if (iUp && mUp && rUp && pUp) return 'B'; // B-Geste
+                
+                return null;
+            }
+            
+            drawHand(landmarks) {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw points
+                landmarks.forEach((pt, idx) => {
+                    const x = pt.x * this.canvas.width;
+                    const y = pt.y * this.canvas.height;
+                    
+                    this.ctx.fillStyle = idx === 8 ? '#FF6B6B' : 'rgba(102,126,234,0.6)';
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, 5, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+                
+                // Draw connections
+                const connections = [
+                    [0, 1], [1, 2], [2, 3], [3, 4],
+                    [5, 6], [6, 7], [7, 8],
+                    [9, 10], [10, 11], [11, 12],
+                    [13, 14], [14, 15], [15, 16],
+                    [17, 18], [18, 19], [19, 20],
+                    [0, 5], [5, 9], [9, 13], [13, 17]
+                ];
+                
+                this.ctx.strokeStyle = 'rgba(102,126,234,0.4)';
+                this.ctx.lineWidth = 2;
+                connections.forEach(([i, j]) => {
+                    const x1 = landmarks[i].x * this.canvas.width;
+                    const y1 = landmarks[i].y * this.canvas.height;
+                    const x2 = landmarks[j].x * this.canvas.width;
+                    const y2 = landmarks[j].y * this.canvas.height;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x1, y1);
+                    this.ctx.lineTo(x2, y2);
+                    this.ctx.stroke();
+                });
+            }
+            
+            addLetter(letter) {
+                this.text += letter;
+                document.getElementById('text-output').textContent = this.text;
+                
+                // Animation
+                const recognized = document.getElementById('recognized');
+                const animations = ['bounce', 'shake', 'spin', 'pulse', 'flip', 'slide', 'tada'];
+                const anim = animations[letter.charCodeAt(0) % animations.length];
+                
+                recognized.classList.remove(...animations);
+                recognized.classList.add(anim);
+                
+                setTimeout(() => {
+                    recognized.classList.remove(anim);
+                }, 600);
+                
+                this.status('✓ Buchstabe hinzugefügt!', 'active');
+            }
+            
+            clearText() {
+                this.text = '';
+                document.getElementById('text-output').textContent = '';
+                document.getElementById('recognized').textContent = '-';
+                document.getElementById('confidence').textContent = '';
+                document.getElementById('progressFill').style.width = '0%';
+                this.status('✓ Text gelöscht', 'active');
+            }
+            
+            stop() {
+                this.active = false;
+                
+                if (this.video.srcObject) {
+                    this.video.srcObject.getTracks().forEach(t => t.stop());
+                }
+                
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('clearBtn').disabled = true;
+                
+                this.status('Gestoppt', 'info');
+            }
+        }
+        
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new SignLanguageAI();
+        });
+    </script>
+</body>
+</html>

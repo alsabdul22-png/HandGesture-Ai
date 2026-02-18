@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Language - Intelligente Erkennung</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1em;
+        }
+        
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        
+        .mode-btn {
+            padding: 10px 20px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            background: white;
+            color: #667eea;
+            transition: all 0.3s;
+        }
+        
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .mode-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .section {
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .video-section {
+            text-align: center;
+        }
+        
+        .canvas-wrapper {
+            position: relative;
+            width: 100%;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            overflow: hidden;
+            background: black;
+            aspect-ratio: 1;
+        }
+        
+        video {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+        
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .training-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .training-box {
+            background: #f8f9fa;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .letter-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .letter-btn {
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.2em;
+            transition: all 0.3s;
+            background: white;
+        }
+        
+        .letter-btn:hover {
+            border-color: #667eea;
+            background: #f0f0f0;
+        }
+        
+        .letter-btn.training {
+            background: #ffd93d;
+            border-color: #ffd93d;
+            animation: pulse-btn 0.5s infinite;
+        }
+        
+        .letter-btn.trained {
+            background: #51cf66;
+            border-color: #51cf66;
+            color: white;
+        }
+        
+        @keyframes pulse-btn {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        #startBtn, #trainStartBtn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        #stopBtn, #trainStopBtn {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        #recordBtn {
+            background: #ffd93d;
+            color: #333;
+        }
+        
+        #clearBtn {
+            background: #51cf66;
+            color: white;
+        }
+        
+        .output-box {
+            background: #f8f9fa;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .output-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+        
+        #recognized {
+            font-size: 4em;
+            font-weight: bold;
+            color: #667eea;
+            text-align: center;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 5px;
+        }
+        
+        #text-output {
+            font-size: 1.2em;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            min-height: 80px;
+            word-wrap: break-word;
+            border: 1px solid #ddd;
+        }
+        
+        .status {
+            text-align: center;
+            font-size: 1em;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        
+        .status.info {
+            background: #e3f2fd;
+            color: #667eea;
+        }
+        
+        .status.active {
+            background: #c8e6c9;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        
+        .status.error {
+            background: #ffcdd2;
+            color: #c62828;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 900px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Sign Language Intelligenz</h1>
+        <p class="subtitle">Trainiere dein persönliches System</p>
+        
+        <div class="mode-selector">
+            <button class="mode-btn active" data-mode="training">🎓 TRAINIEREN</button>
+            <button class="mode-btn" data-mode="recognize">✍️ SCHREIBEN</button>
+        </div>
+        
+        <!-- TRAINING MODE -->
+        <div class="section active" id="training-section">
+            <div class="content">
+                <div class="video-section">
+                    <div class="canvas-wrapper">
+                        <video id="videoTrain" autoplay></video>
+                        <canvas id="canvasTrain"></canvas>
+                    </div>
+                </div>
+                
+                <div class="training-section">
+                    <div class="training-box">
+                        <h3>Schritt-für-Schritt Trainieren</h3>
+                        <p style="margin-bottom: 15px; color: #666;">
+                            Wähle einen Buchstabe, mache 5 Sekunden die Geste vor der Kamera.
+                            Das System lernt deine Handhaltung!
+                        </p>
+                        <button id="trainStartBtn">▶ TRAINIEREN STARTEN</button>
+                    </div>
+                    
+                    <div class="training-box">
+                        <h3>Buchstaben trainieren:</h3>
+                        <div class="letter-grid" id="letterGrid"></div>
+                    </div>
+                    
+                    <div class="training-box">
+                        <h3>Fortschritt</h3>
+                        <div id="trainingProgress" style="font-size: 1.1em; color: #667eea; font-weight: bold;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="status info" id="trainingStatus">Klick "TRAINIEREN STARTEN" um zu beginnen</div>
+        </div>
+        
+        <!-- RECOGNIZE MODE -->
+        <div class="section" id="recognize-section">
+            <div class="content">
+                <div class="video-section">
+                    <div class="canvas-wrapper">
+                        <video id="videoRec" autoplay></video>
+                        <canvas id="canvasRec"></canvas>
+                    </div>
+                </div>
+                
+                <div class="training-section">
+                    <div class="output-box">
+                        <h3>Erkannter Buchstabe</h3>
+                        <div id="recognized">-</div>
+                    </div>
+                    
+                    <div class="output-box">
+                        <h3>Dein Text</h3>
+                        <div id="text-output"></div>
+                    </div>
+                    
+                    <div class="controls">
+                        <button id="startBtn">▶ START</button>
+                        <button id="stopBtn" disabled>⏹ STOP</button>
+                        <button id="clearBtn" disabled>🗑 LÖSCHEN</button>
+                    </div>
+                </div>
+            </div>
+            <div class="status info" id="recognizeStatus">Trainiere erst die Buchstaben!</div>
+        </div>
+    </div>
+
+    <!-- MediaPipe Solutions -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0"></script>
+    <!-- ML.js für Klassifikation -->
+    <script src="https://cdn.jsdelivr.net/npm/ml-knn@6.2.0"></script>
+
+    <script>
+        class SignLanguageIntelligence {
+            constructor() {
+                this.trainingData = []; // {letter, features}
+                this.handLandmarker = null;
+                
+                this.currentMode = 'training';
+                this.trainingLetter = null;
+                this.trainingActive = false;
+                this.trainingFrames = 0;
+                
+                this.recognizeActive = false;
+                this.recognizedText = '';
+                this.lastLetter = '';
+                this.holdingCount = 0;
+                
+                this.setupModeButtons();
+                this.setupTrainingButtons();
+                this.setupRecognitionButtons();
+                this.createLetterGrid();
+                this.initHandLandmarker();
+            }
+            
+            setupModeButtons() {
+                document.querySelectorAll('.mode-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                        
+                        e.target.classList.add('active');
+                        const mode = e.target.dataset.mode;
+                        
+                        if (mode === 'training') {
+                            document.getElementById('training-section').classList.add('active');
+                            this.currentMode = 'training';
+                            this.stopRecognition();
+                        } else {
+                            document.getElementById('recognize-section').classList.add('active');
+                            this.currentMode = 'recognize';
+                            this.stopTraining();
+                        }
+                    });
+                });
+            }
+            
+            setupTrainingButtons() {
+                document.getElementById('trainStartBtn').addEventListener('click', () => {
+                    if (this.trainingActive) {
+                        this.stopTraining();
+                    } else {
+                        this.startTraining();
+                    }
+                });
+            }
+            
+            setupRecognitionButtons() {
+                document.getElementById('startBtn').addEventListener('click', () => this.startRecognition());
+                document.getElementById('stopBtn').addEventListener('click', () => this.stopRecognition());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clearText());
+            }
+            
+            createLetterGrid() {
+                const grid = document.getElementById('letterGrid');
+                for (let i = 65; i <= 90; i++) {
+                    const letter = String.fromCharCode(i);
+                    const btn = document.createElement('button');
+                    btn.className = 'letter-btn';
+                    btn.textContent = letter;
+                    btn.dataset.letter = letter;
+                    btn.addEventListener('click', (e) => this.selectLetterToTrain(letter, e.target));
+                    grid.appendChild(btn);
+                }
+            }
+            
+            async initHandLandmarker() {
+                try {
+                    const vision = await Mediapipe.FilesetResolver.forVisionTasks(
+                        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+                    );
+                    
+                    this.handLandmarker = await Mediapipe.HandLandmarker.createFromOptions(vision, {
+                        baseOptions: {
+                            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
+                        },
+                        runningMode: "VIDEO",
+                        numHands: 1,
+                        minHandDetectionConfidence: 0.7,
+                        minHandPresenceConfidence: 0.7,
+                        minTrackingConfidence: 0.7
+                    });
+                    
+                    console.log('✓ Hand Landmarker geladen');
+                } catch (e) {
+                    console.error('Error loading hand landmarker:', e);
+                }
+            }
+            
+            selectLetterToTrain(letter, btn) {
+                this.trainingLetter = letter;
+                
+                document.querySelectorAll('.letter-btn').forEach(b => {
+                    b.classList.remove('training');
+                });
+                btn.classList.add('training');
+                
+                document.getElementById('trainingStatus').textContent = 
+                    'Bereit zum Trainieren: ' + letter + ' - Klick "TRAINIEREN STARTEN"';
+                document.getElementById('trainingStatus').className = 'status info';
+            }
+            
+            async startTraining() {
+                if (!this.trainingLetter) {
+                    alert('Wähle zuerst einen Buchstabe!');
+                    return;
+                }
+                
+                try {
+                    const video = document.getElementById('videoTrain');
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    video.srcObject = stream;
+                    
+                    const canvas = document.getElementById('canvasTrain');
+                    await new Promise(resolve => {
+                        video.onloadedmetadata = () => {
+                            video.play();
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            resolve();
+                        };
+                    });
+                    
+                    this.trainingActive = true;
+                    this.trainingFrames = 0;
+                    
+                    document.getElementById('trainStartBtn').textContent = '⏹ STOP';
+                    document.getElementById('trainingStatus').textContent = 
+                        'Trainiere: ' + this.trainingLetter + ' - Halte deine Hand stabil! (5 Sekunden)';
+                    document.getElementById('trainingStatus').className = 'status active';
+                    
+                    this.runTraining();
+                } catch (e) {
+                    alert('Fehler: ' + e.message);
+                }
+            }
+            
+            async runTraining() {
+                if (!this.trainingActive) return;
+                
+                const video = document.getElementById('videoTrain');
+                const canvas = document.getElementById('canvasTrain');
+                const ctx = canvas.getContext('2d');
+                
+                if (this.handLandmarker && video.readyState === video.HAVE_ENOUGH_DATA) {
+                    const results = this.handLandmarker.detectForVideo(video, performance.now());
+                    
+                    if (results.landmarks && results.landmarks.length > 0) {
+                        const landmarks = results.landmarks[0];
+                        const features = this.extractFeatures(landmarks);
+                        
+                        // Speichere alle Frames während des Trainings
+                        this.trainingData.push({
+                            letter: this.trainingLetter,
+                            features: features
+                        });
+                        
+                        this.trainingFrames++;
+                        const progress = Math.round((this.trainingFrames / 150) * 100); // ~5 Sekunden
+                        
+                        document.getElementById('trainingProgress').textContent = 
+                            'Fortschritt: ' + progress + '% (' + this.trainingFrames + ' Frames)';
+                        
+                        this.drawHand(landmarks, canvas);
+                        
+                        if (this.trainingFrames >= 150) { // 5 Sekunden
+                            this.finishTraining();
+                        }
+                    }
+                }
+                
+                requestAnimationFrame(() => this.runTraining());
+            }
+            
+            finishTraining() {
+                this.trainingActive = false;
+                
+                const btn = document.querySelector('[data-letter="' + this.trainingLetter + '"]');
+                btn.classList.remove('training');
+                btn.classList.add('trained');
+                
+                document.getElementById('trainStartBtn').textContent = '▶ TRAINIEREN STARTEN';
+                document.getElementById('trainingStatus').textContent = 
+                    '✓ ' + this.trainingLetter + ' erfolgreich trainiert!';
+                document.getElementById('trainingStatus').className = 'status active';
+                
+                const trainedCount = document.querySelectorAll('.letter-btn.trained').length;
+                document.getElementById('trainingProgress').textContent = 
+                    trainedCount + ' Buchstaben trainiert';
+            }
+            
+            stopTraining() {
+                this.trainingActive = false;
+                const video = document.getElementById('videoTrain');
+                if (video.srcObject) {
+                    video.srcObject.getTracks().forEach(t => t.stop());
+                }
+                document.getElementById('trainStartBtn').textContent = '▶ TRAINIEREN STARTEN';
+            }
+            
+            async startRecognition() {
+                const trainedCount = document.querySelectorAll('.letter-btn.trained').length;
+                if (trainedCount === 0) {
+                    alert('Trainiere erst mindestens einen Buchstabe!');
+                    return;
+                }
+                
+                try {
+                    const video = document.getElementById('videoRec');
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    video.srcObject = stream;
+                    
+                    const canvas = document.getElementById('canvasRec');
+                    await new Promise(resolve => {
+                        video.onloadedmetadata = () => {
+                            video.play();
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            resolve();
+                        };
+                    });
+                    
+                    this.recognizeActive = true;
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                    document.getElementById('clearBtn').disabled = false;
+                    document.getElementById('recognizeStatus').textContent = 
+                        '✓ Sistema aktiv - Zeige deine Buchstaben!';
+                    document.getElementById('recognizeStatus').className = 'status active';
+                    
+                    this.runRecognition();
+                } catch (e) {
+                    alert('Fehler: ' + e.message);
+                }
+            }
+            
+            async runRecognition() {
+                if (!this.recognizeActive) return;
+                
+                const video = document.getElementById('videoRec');
+                const canvas = document.getElementById('canvasRec');
+                const ctx = canvas.getContext('2d');
+                
+                if (this.handLandmarker && video.readyState === video.HAVE_ENOUGH_DATA) {
+                    const results = this.handLandmarker.detectForVideo(video, performance.now());
+                    
+                    if (results.landmarks && results.landmarks.length > 0) {
+                        const landmarks = results.landmarks[0];
+                        const features = this.extractFeatures(landmarks);
+                        const letter = this.classifyFeatures(features);
+                        
+                        if (letter) {
+                            if (letter === this.lastLetter) {
+                                this.holdingCount++;
+                                
+                                if (this.holdingCount >= 90) { // 3 Sekunden
+                                    this.addLetter(letter);
+                                    this.holdingCount = 0;
+                                    this.lastLetter = '';
+                                }
+                            } else {
+                                this.lastLetter = letter;
+                                this.holdingCount = 0;
+                            }
+                            
+                            document.getElementById('recognized').textContent = letter;
+                        } else {
+                            document.getElementById('recognized').textContent = '?';
+                        }
+                        
+                        this.drawHand(landmarks, canvas);
+                    } else {
+                        document.getElementById('recognized').textContent = '-';
+                    }
+                }
+                
+                requestAnimationFrame(() => this.runRecognition());
+            }
+            
+            extractFeatures(landmarks) {
+                // Extrahiere wichtige Merkmale der Handposition
+                const features = [];
+                
+                // Normalisiere auf Handgelenk
+                const wrist = landmarks[0];
+                
+                landmarks.forEach(pt => {
+                    features.push(pt.x - wrist.x);
+                    features.push(pt.y - wrist.y);
+                    features.push(pt.z || 0);
+                });
+                
+                return features;
+            }
+            
+            classifyFeatures(features) {
+                if (this.trainingData.length === 0) return null;
+                
+                // Einfache Nähe-basierte Klassifikation
+                let bestLetter = null;
+                let bestDistance = Infinity;
+                let count = {};
+                
+                this.trainingData.forEach(data => {
+                    let distance = 0;
+                    for (let i = 0; i < features.length; i++) {
+                        const diff = features[i] - (data.features[i] || 0);
+                        distance += diff * diff;
+                    }
+                    distance = Math.sqrt(distance);
+                    
+                    if (distance < 1.5) { // Schwelle
+                        count[data.letter] = (count[data.letter] || 0) + 1;
+                    }
+                });
+                
+                // Wähle Buchstabe mit meisten Matches
+                for (let [letter, cnt] of Object.entries(count)) {
+                    if (cnt > 3) { // Mindestens 3 Matches
+                        return letter;
+                    }
+                }
+                
+                return null;
+            }
+            
+            addLetter(letter) {
+                this.recognizedText += letter;
+                document.getElementById('text-output').textContent = this.recognizedText;
+            }
+            
+            clearText() {
+                this.recognizedText = '';
+                document.getElementById('text-output').textContent = '';
+                document.getElementById('recognized').textContent = '-';
+            }
+            
+            drawHand(landmarks, canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                landmarks.forEach(pt => {
+                    const x = pt.x * canvas.width;
+                    const y = pt.y * canvas.height;
+                    
+                    ctx.fillStyle = 'rgba(102,126,234,0.6)';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                
+                const connections = [
+                    [0, 1], [1, 2], [2, 3], [3, 4],
+                    [5, 6], [6, 7], [7, 8],
+                    [9, 10], [10, 11], [11, 12],
+                    [13, 14], [14, 15], [15, 16],
+                    [17, 18], [18, 19], [19, 20],
+                    [0, 5], [5, 9], [9, 13], [13, 17]
+                ];
+                
+                ctx.strokeStyle = 'rgba(102,126,234,0.4)';
+                ctx.lineWidth = 2;
+                connections.forEach(([i, j]) => {
+                    const x1 = landmarks[i].x * canvas.width;
+                    const y1 = landmarks[i].y * canvas.height;
+                    const x2 = landmarks[j].x * canvas.width;
+                    const y2 = landmarks[j].y * canvas.height;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                });
+            }
+            
+            stopRecognition() {
+                this.recognizeActive = false;
+                const video = document.getElementById('videoRec');
+                if (video.srcObject) {
+                    video.srcObject.getTracks().forEach(t => t.stop());
+                }
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('clearBtn').disabled = true;
+            }
+        }
+        
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new SignLanguageIntelligence();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Drawing System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            max-width: 1200px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+        }
+        
+        .canvas-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+        
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        #webcam, #canvas {
+            display: block;
+            max-width: 500px;
+            width: 100%;
+            height: auto;
+        }
+        
+        #canvas {
+            background: rgba(0, 0, 0, 0.1);
+            cursor: crosshair;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        #startBtn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        #stopBtn {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        #clearBtn {
+            background: #ffd93d;
+            color: #333;
+        }
+        
+        #downloadBtn {
+            background: #51cf66;
+            color: white;
+        }
+        
+        .settings {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .setting-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        label {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        input[type="color"] {
+            width: 50px;
+            height: 40px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        input[type="range"] {
+            width: 150px;
+        }
+        
+        .info {
+            background: #e7f5ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .status {
+            text-align: center;
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 20px;
+        }
+        
+        .status.active {
+            color: #51cf66;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            #webcam, #canvas {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✋ Air Drawing System</h1>
+        
+        <div class="info">
+            <strong>Anleitung:</strong> Klick "Start", halte deine Hand vor die Webcam und bewege deine Fingerspitze, um zu zeichnen!
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn">▶ Start</button>
+            <button id="stopBtn" disabled>⏹ Stop</button>
+            <button id="clearBtn" disabled>🗑 Löschen</button>
+            <button id="downloadBtn" disabled>⬇ Download</button>
+        </div>
+        
+        <div class="settings">
+            <div class="setting-group">
+                <label for="colorPicker">Farbe:</label>
+                <input type="color" id="colorPicker" value="#667eea">
+            </div>
+            <div class="setting-group">
+                <label for="brushSize">Pinselgröße:</label>
+                <input type="range" id="brushSize" min="1" max="50" value="8">
+                <span id="brushSizeValue">8px</span>
+            </div>
+            <div class="setting-group">
+                <label for="confidence">Hand Erkennung:</label>
+                <input type="range" id="confidence" min="0.3" max="0.9" step="0.1" value="0.7">
+                <span id="confidenceValue">0.7</span>
+            </div>
+        </div>
+        
+        <div class="canvas-container">
+            <div class="canvas-wrapper">
+                <video id="webcam" autoplay playsinline></video>
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+        
+        <div class="status" id="status">Klick Start um zu beginnen</div>
+    </div>
+
+    <!-- ML5.js für Hand Tracking -->
+    <script src="https://unpkg.com/ml5@0.12.0/dist/ml5.min.js"></script>
+
+    <script>
+        let handpose = null;
+        let predictions = [];
+
+        class AirDrawingSystem {
+            constructor() {
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.video = document.getElementById('webcam');
+                this.drawing = false;
+                this.lastX = 0;
+                this.lastY = 0;
+                this.isActive = false;
+                this.animationId = null;
+                this.canvasSize = { width: 500, height: 500 };
+                
+                this.setupEventListeners();
+                this.setupCanvasSize();
+            }
+            
+            setupEventListeners() {
+                document.getElementById('startBtn').addEventListener('click', () => this.start());
+                document.getElementById('stopBtn').addEventListener('click', () => this.stop());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clearCanvas());
+                document.getElementById('downloadBtn').addEventListener('click', () => this.downloadDrawing());
+                
+                document.getElementById('brushSize').addEventListener('change', (e) => {
+                    document.getElementById('brushSizeValue').textContent = e.target.value + 'px';
+                });
+                
+                document.getElementById('confidence').addEventListener('change', (e) => {
+                    document.getElementById('confidenceValue').textContent = e.target.value;
+                });
+            }
+            
+            setupCanvasSize() {
+                this.video.addEventListener('loadedmetadata', () => {
+                    this.canvasSize.width = this.video.videoWidth;
+                    this.canvasSize.height = this.video.videoHeight;
+                    this.canvas.width = this.canvasSize.width;
+                    this.canvas.height = this.canvasSize.height;
+                    console.log('Canvas Größe:', this.canvasSize);
+                });
+            }
+            
+            async start() {
+                try {
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                    document.getElementById('clearBtn').disabled = false;
+                    document.getElementById('downloadBtn').disabled = false;
+                    this.updateStatus('Webcam wird aktiviert...', true);
+                    console.log('Starte Air Drawing System...');
+                    
+                    // Webcam starten
+                    console.log('Registriere Webcam...');
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            facingMode: 'user'
+                        },
+                        audio: false
+                    });
+                    
+                    console.log('Webcam-Stream erhalten, verbinde mit Video-Element...');
+                    this.video.srcObject = stream;
+                    
+                    // Auf Video-Ready warten
+                    await new Promise((resolve, reject) => {
+                        const timeout = setTimeout(() => {
+                            reject(new Error('Video konnte nicht geladen werden (Timeout)'));
+                        }, 5000);
+                        
+                        this.video.onloadedmetadata = () => {
+                            clearTimeout(timeout);
+                            console.log('Video Metadaten geladen, starte Video...');
+                            this.video.play().catch(e => console.error('Play-Fehler:', e));
+                            resolve();
+                        };
+                    });
+                    
+                    this.updateStatus('Hand-Erkennung wird geladen (kann bis zu 30 Sekunden dauern)...', true);
+                    console.log('Lade ml5 Handpose Modell...');
+                    
+                    // ML5 Handpose laden
+                    if (!handpose) {
+                        handpose = await ml5.handpose(this.video, {
+                            flipHorizontal: false
+                        });
+                        console.log('✓ Hand Erkennung erfolgreich geladen!');
+                        
+                        // Test - erste Prediction
+                        handpose.predict(this.video).then(results => {
+                            console.log('Hand-Modell funktioniert, erste Prediction erhalten');
+                        });
+                    }
+                    
+                    this.isActive = true;
+                    console.log('✓ System ist aktiv!');
+                    this.updateStatus('System aktiv - Hand vor Webcam bewegen! 👋', true);
+                    this.detectionLoop();
+                    
+                } catch (error) {
+                    console.error('❌ Fehler beim Starten:', error);
+                    this.updateStatus('Fehler: ' + error.message, false);
+                    alert('Fehler: ' + error.message + '\n\nBitte die Browser-Konsole (F12) überprüfen für Details.');
+                    this.stop();
+                }
+            }
+            
+            detectionLoop() {
+                if (!this.isActive) {
+                    console.log('Detection Loop beendet - System inaktiv');
+                    return;
+                }
+                
+                if (handpose && this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
+                    handpose.predict(this.video)
+                        .then(results => {
+                            this.processResults(results);
+                        })
+                        .catch(error => {
+                            console.error('Vorhersagefehler:', error);
+                        });
+                }
+                
+                this.animationId = requestAnimationFrame(() => this.detectionLoop());
+            }
+            
+            processResults(results) {
+                // Canvas zeichnen
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                if (results && results.length > 0) {
+                    const hand = results[0];
+                    const landmarks = hand.landmarks;
+                    
+                    // Zeigefingerposition (Index 8)
+                    const indexFinger = landmarks[8];
+                    const x = indexFinger[0];
+                    const y = indexFinger[1];
+                    
+                    // Mittelfinger (Index 12) und Zeigefinger für Gestenkennung
+                    const middleFinger = landmarks[12];
+                    const indexFingerBase = landmarks[5];
+                    
+                    // Distanz zwischen Zeige- und Mittelfinger (Spitzen)
+                    const distance = Math.hypot(
+                        indexFinger[0] - middleFinger[0],
+                        indexFinger[1] - middleFinger[1]
+                    );
+                    
+                    // Zeichnen, wenn Finger weit genug auseinander sind (> 30px)
+                    if (distance > 30) {
+                        if (this.drawing) {
+                            this.drawLine(this.lastX, this.lastY, x, y);
+                        }
+                        this.drawing = true;
+                        this.drawPoint(x, y);
+                    } else {
+                        this.drawing = false;
+                    }
+                    
+                    this.lastX = x;
+                    this.lastY = y;
+                    
+                    // Hand Skeleton zeichnen
+                    this.drawHand(landmarks);
+                } else {
+                    this.drawing = false;
+                }
+            }
+            
+            drawLine(fromX, fromY, toX, toY) {
+                const color = document.getElementById('colorPicker').value;
+                const size = document.getElementById('brushSize').value;
+                
+                this.ctx.strokeStyle = color;
+                this.ctx.lineWidth = size;
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+                this.ctx.globalAlpha = 0.8;
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(fromX, fromY);
+                this.ctx.lineTo(toX, toY);
+                this.ctx.stroke();
+                
+                this.ctx.globalAlpha = 1;
+            }
+            
+            drawPoint(x, y) {
+                const color = document.getElementById('colorPicker').value;
+                const size = document.getElementById('brushSize').value;
+                
+                this.ctx.fillStyle = color;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+            
+            drawHand(landmarks) {
+                // Draw landmarks
+                landmarks.forEach((landmark, index) => {
+                    const x = landmark[0];
+                    const y = landmark[1];
+                    
+                    this.ctx.fillStyle = 'rgba(102, 126, 234, 0.4)';
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, 4, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+                
+                // Draw connections
+                const connections = [
+                    [0, 1], [1, 2], [2, 3], [3, 4],
+                    [5, 6], [6, 7], [7, 8],
+                    [9, 10], [10, 11], [11, 12],
+                    [13, 14], [14, 15], [15, 16],
+                    [17, 18], [18, 19], [19, 20],
+                    [0, 5], [5, 9], [9, 13], [13, 17]
+                ];
+                
+                this.ctx.strokeStyle = 'rgba(102, 126, 234, 0.3)';
+                this.ctx.lineWidth = 2;
+                
+                connections.forEach(([start, end]) => {
+                    if (start < landmarks.length && end < landmarks.length) {
+                        const startLandmark = landmarks[start];
+                        const endLandmark = landmarks[end];
+                        
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(startLandmark[0], startLandmark[1]);
+                        this.ctx.lineTo(endLandmark[0], endLandmark[1]);
+                        this.ctx.stroke();
+                    }
+                });
+            }
+            
+            clearCanvas() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.updateStatus('Canvas gelöscht', true);
+            }
+            
+            downloadDrawing() {
+                const link = document.createElement('a');
+                link.href = this.canvas.toDataURL('image/png');
+                link.download = 'air-drawing-' + new Date().getTime() + '.png';
+                link.click();
+                this.updateStatus('Bild heruntergeladen', true);
+            }
+            
+            stop() {
+                this.isActive = false;
+                this.drawing = false;
+                
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                }
+                
+                if (this.video.srcObject) {
+                    this.video.srcObject.getTracks().forEach(track => track.stop());
+                }
+                
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('clearBtn').disabled = true;
+                document.getElementById('downloadBtn').disabled = true;
+                
+                this.updateStatus('System gestoppt', false);
+            }
+            
+            updateStatus(message, active) {
+                const statusEl = document.getElementById('status');
+                statusEl.textContent = message;
+                if (active) {
+                    statusEl.classList.add('active');
+                } else {
+                    statusEl.classList.remove('active');
+                }
+            }
+        }
+        
+        // System starten wenn Seite geladen ist
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('Seite geladen, System bereit!');
+            window.airDrawingSystem = new AirDrawingSystem();
+        });
+    </script>
+</body>
+</html>

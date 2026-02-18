@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Drawing - Einfach & Zuverlässig</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 2em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+        
+        .info {
+            background: #e7f5ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .canvas-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto 20px;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            overflow: hidden;
+            background: black;
+            aspect-ratio: 4/3;
+        }
+        
+        video {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+        
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        #startBtn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        #stopBtn {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        #clearBtn {
+            background: #ffd93d;
+            color: #333;
+        }
+        
+        #downloadBtn {
+            background: #51cf66;
+            color: white;
+        }
+        
+        .settings {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .setting-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        label {
+            font-weight: bold;
+        }
+        
+        input[type="color"], input[type="range"] {
+            cursor: pointer;
+        }
+        
+        input[type="color"] {
+            width: 50px;
+            height: 40px;
+            border: none;
+            border-radius: 5px;
+        }
+        
+        input[type="range"] {
+            width: 120px;
+        }
+        
+        .status {
+            text-align: center;
+            font-size: 1em;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        
+        .status.info {
+            background: #e3f2fd;
+            color: #667eea;
+        }
+        
+        .status.active {
+            background: #c8e6c9;
+            color: #2e7d32;
+            font-weight: bold;
+            animation: pulse 1s infinite;
+        }
+        
+        .status.error {
+            background: #ffcdd2;
+            color: #c62828;
+            font-weight: bold;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .debug-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.8em;
+            display: none;
+            max-width: 300px;
+        }
+        
+        .debug-info.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✋ Air Drawing</h1>
+        <p class="subtitle">Zeichnen mit deinem Finger</p>
+        
+        <div class="info">
+            <strong>So geht's:</strong> Drück Start, zeige deine Hand, und bewege deinen <strong>Zeigefinger</strong> um zu zeichnen!
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn">▶ START</button>
+            <button id="stopBtn" disabled>⏹ STOP</button>
+            <button id="clearBtn" disabled>🗑 LÖSCHEN</button>
+            <button id="downloadBtn" disabled>⬇ SPEICHERN</button>
+        </div>
+        
+        <div class="settings">
+            <div class="setting-group">
+                <label for="color">Farbe:</label>
+                <input type="color" id="color" value="#667eea">
+            </div>
+            <div class="setting-group">
+                <label for="size">Größe:</label>
+                <input type="range" id="size" min="2" max="30" value="8">
+                <span id="sizeValue">8</span>
+            </div>
+        </div>
+        
+        <div class="canvas-wrapper">
+            <video id="video" autoplay></video>
+            <canvas id="canvas"></canvas>
+        </div>
+        
+        <div class="status info" id="status">Klick START</div>
+    </div>
+
+    <div class="debug-info" id="debugInfo"></div>
+
+    <!-- TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4"></script>
+    <!-- HandPose Model -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose@0.0.7"></script>
+
+    <script>
+        class Drawing {
+            constructor() {
+                this.video = document.getElementById('video');
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                
+                this.active = false;
+                this.model = null;
+                this.drawing = false;
+                this.lastX = 0;
+                this.lastY = 0;
+                
+                this.setupListeners();
+                this.setupCanvas();
+            }
+            
+            setupListeners() {
+                document.getElementById('startBtn').onclick = () => this.start();
+                document.getElementById('stopBtn').onclick = () => this.stop();
+                document.getElementById('clearBtn').onclick = () => this.clear();
+                document.getElementById('downloadBtn').onclick = () => this.download();
+                
+                document.getElementById('size').onchange = (e) => {
+                    document.getElementById('sizeValue').textContent = e.target.value;
+                };
+            }
+            
+            setupCanvas() {
+                this.video.onloadedmetadata = () => {
+                    this.canvas.width = this.video.videoWidth;
+                    this.canvas.height = this.video.videoHeight;
+                };
+            }
+            
+            log(msg) {
+                console.log(msg);
+                const debug = document.getElementById('debugInfo');
+                debug.textContent = msg + '\n' + debug.textContent;
+            }
+            
+            status(msg, type = 'info') {
+                const s = document.getElementById('status');
+                s.textContent = msg;
+                s.className = 'status ' + type;
+            }
+            
+            async start() {
+                try {
+                    this.status('Starte...', 'info');
+                    this.log('1. Webcam wird gefordert...');
+                    
+                    // Get camera
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: true
+                    });
+                    
+                    this.video.srcObject = stream;
+                    this.log('2. Webcam erhalten ✓');
+                    
+                    // Wait for video to be ready
+                    await new Promise(resolve => {
+                        this.video.onloadedmetadata = () => {
+                            this.video.play();
+                            resolve();
+                        };
+                    });
+                    
+                    this.log('3. Video lädt... ✓');
+                    
+                    // Load model
+                    this.status('Lade Modell...', 'info');
+                    this.log('4. Loading handpose...');
+                    
+                    if (!this.model) {
+                        this.model = await handpose.load();
+                        this.log('5. Modell geladen! ✓');
+                    }
+                    
+                    this.active = true;
+                    this.status('✓ AKTIV - Zeige deine Hand!', 'active');
+                    
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                    document.getElementById('clearBtn').disabled = false;
+                    document.getElementById('downloadBtn').disabled = false;
+                    
+                    document.getElementById('debugInfo').classList.add('active');
+                    
+                    this.run();
+                    
+                } catch (e) {
+                    this.status('FEHLER: ' + e.message, 'error');
+                    this.log('❌ ' + e.message);
+                    this.stop();
+                }
+            }
+            
+            async run() {
+                if (!this.active) return;
+                
+                try {
+                    // Get predictions
+                    const predictions = await this.model.estimateHands(this.video, true);
+                    
+                    if (predictions.length > 0) {
+                        const hand = predictions[0];
+                        const landmarks = hand.landmarks;
+                        
+                        // Zeigefinger-Spitze (Index 8)
+                        const [x, y] = landmarks[8];
+                        
+                        // Zeigefinger-Base (Index 5)
+                        const [baseX, baseY] = landmarks[5];
+                        
+                        // Finger ist hoch = über Base
+                        if (y < baseY) {
+                            if (this.drawing) {
+                                this.line(this.lastX, this.lastY, x, y);
+                            }
+                            this.drawing = true;
+                            this.dot(x, y);
+                        } else {
+                            this.drawing = false;
+                        }
+                        
+                        this.lastX = x;
+                        this.lastY = y;
+                        
+                        // Draw hand outline
+                        this.drawHand(landmarks);
+                        
+                        this.log('✓ Hand: ' + Math.round(x) + ', ' + Math.round(y));
+                    } else {
+                        this.drawing = false;
+                        this.log('⚠ Keine Hand erkannt');
+                    }
+                } catch (e) {
+                    this.log('❌ Error: ' + e.message);
+                }
+                
+                requestAnimationFrame(() => this.run());
+            }
+            
+            drawHand(landmarks) {
+                // Draw points
+                landmarks.forEach(([x, y]) => {
+                    this.ctx.fillStyle = 'rgba(102,126,234,0.5)';
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, 3, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+                
+                // Draw lines
+                const connections = [
+                    [0, 1], [1, 2], [2, 3], [3, 4],
+                    [5, 6], [6, 7], [7, 8],
+                    [9, 10], [10, 11], [11, 12],
+                    [13, 14], [14, 15], [15, 16],
+                    [17, 18], [18, 19], [19, 20],
+                    [0, 5], [5, 9], [9, 13], [13, 17]
+                ];
+                
+                this.ctx.strokeStyle = 'rgba(102,126,234,0.3)';
+                this.ctx.lineWidth = 1;
+                connections.forEach(([i, j]) => {
+                    const [x1, y1] = landmarks[i];
+                    const [x2, y2] = landmarks[j];
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x1, y1);
+                    this.ctx.lineTo(x2, y2);
+                    this.ctx.stroke();
+                });
+            }
+            
+            line(x1, y1, x2, y2) {
+                const color = document.getElementById('color').value;
+                const size = document.getElementById('size').value;
+                
+                this.ctx.strokeStyle = color;
+                this.ctx.lineWidth = size;
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(x1, y1);
+                this.ctx.lineTo(x2, y2);
+                this.ctx.stroke();
+            }
+            
+            dot(x, y) {
+                const color = document.getElementById('color').value;
+                const size = document.getElementById('size').value;
+                
+                this.ctx.fillStyle = color;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+            
+            clear() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.status('Gelöscht', 'info');
+            }
+            
+            download() {
+                const a = document.createElement('a');
+                a.href = this.canvas.toDataURL('image/png');
+                a.download = 'draw-' + Date.now() + '.png';
+                a.click();
+                this.status('Heruntergeladen!', 'active');
+            }
+            
+            stop() {
+                this.active = false;
+                this.drawing = false;
+                
+                if (this.video.srcObject) {
+                    this.video.srcObject.getTracks().forEach(t => t.stop());
+                }
+                
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('clearBtn').disabled = true;
+                document.getElementById('downloadBtn').disabled = true;
+                
+                document.getElementById('debugInfo').classList.remove('active');
+                
+                this.status('Gestoppt', 'info');
+            }
+        }
+        
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new Drawing();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Drawing - Einfach</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            max-width: 800px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .info {
+            background: #e7f5ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto 20px;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            overflow: hidden;
+            background: black;
+        }
+        
+        #webcam {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        
+        #drawingCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        #startBtn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        #stopBtn {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        #clearBtn {
+            background: #ffd93d;
+            color: #333;
+        }
+        
+        #downloadBtn {
+            background: #51cf66;
+            color: white;
+        }
+        
+        .settings {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .setting-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        label {
+            font-weight: bold;
+        }
+        
+        input[type="color"] {
+            width: 50px;
+            height: 40px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        input[type="range"] {
+            width: 120px;
+        }
+        
+        .status {
+            text-align: center;
+            font-size: 0.9em;
+            color: #666;
+            padding: 10px;
+        }
+        
+        .status.active {
+            color: #51cf66;
+            font-weight: bold;
+        }
+        
+        .status.error {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✋ Air Drawing - Einfache Version</h1>
+        
+        <div class="info">
+            <strong>Anleitung:</strong> Zeige einen roten/bunten Gegenstand vor die Webcam. Das System verfolgt die Bewegung und zeichnet!
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn">▶ Start</button>
+            <button id="stopBtn" disabled>⏹ Stop</button>
+            <button id="clearBtn" disabled>🗑 Löschen</button>
+            <button id="downloadBtn" disabled>⬇ Download</button>
+        </div>
+        
+        <div class="settings">
+            <div class="setting-group">
+                <label for="colorPicker">Zeichenfarbe:</label>
+                <input type="color" id="colorPicker" value="#667eea">
+            </div>
+            <div class="setting-group">
+                <label for="brushSize">Pinselgröße:</label>
+                <input type="range" id="brushSize" min="1" max="50" value="8">
+                <span id="brushSizeValue">8px</span>
+            </div>
+        </div>
+        
+        <div class="canvas-container">
+            <video id="webcam" autoplay playsinline muted></video>
+            <canvas id="drawingCanvas"></canvas>
+        </div>
+        
+        <div class="status" id="status">Klick Start zum Starten</div>
+    </div>
+
+    <script>
+        class SimpleAirDrawing {
+            constructor() {
+                this.video = document.getElementById('webcam');
+                this.canvas = document.getElementById('drawingCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.isActive = false;
+                this.lastX = 0;
+                this.lastY = 0;
+                this.drawing = false;
+                this.animationId = null;
+                
+                this.setupListeners();
+            }
+            
+            setupListeners() {
+                document.getElementById('startBtn').addEventListener('click', () => this.start());
+                document.getElementById('stopBtn').addEventListener('click', () => this.stop());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clear());
+                document.getElementById('downloadBtn').addEventListener('click', () => this.download());
+                
+                document.getElementById('brushSize').addEventListener('change', (e) => {
+                    document.getElementById('brushSizeValue').textContent = e.target.value + 'px';
+                });
+            }
+            
+            async start() {
+                try {
+                    this.updateStatus('Webcam wird gestartet...', false);
+                    
+                    // Webcam starten
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 640 },
+                            height: { ideal: 480 }
+                        }
+                    });
+                    
+                    this.video.srcObject = stream;
+                    
+                    // Warten bis Video bereit
+                    await new Promise(resolve => {
+                        this.video.onloadedmetadata = () => {
+                            this.video.play();
+                            resolve();
+                        };
+                    });
+                    
+                    // Canvas Größe anpassen
+                    this.canvas.width = this.video.videoWidth;
+                    this.canvas.height = this.video.videoHeight;
+                    
+                    this.isActive = true;
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                    document.getElementById('clearBtn').disabled = false;
+                    document.getElementById('downloadBtn').disabled = false;
+                    
+                    this.updateStatus('✓ System aktiv! Halte einen roten Gegenstand vor die Webcam', 'active');
+                    this.detectionLoop();
+                    
+                } catch (error) {
+                    this.updateStatus('Fehler: ' + error.message, 'error');
+                    console.error('Fehler:', error);
+                }
+            }
+            
+            detectionLoop() {
+                if (!this.isActive) return;
+                
+                this.detectColor();
+                this.animationId = requestAnimationFrame(() => this.detectionLoop());
+            }
+            
+            detectColor() {
+                const imageData = this.getVideoImageData();
+                if (!imageData) return;
+                
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                
+                let redX = 0, redY = 0, redCount = 0;
+                
+                // Suche nach roten Pixeln
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    
+                    // Rot-erkennung: Rot > 150 und Rot > Grün und Grün und Blau klein
+                    if (r > 150 && r > g + 50 && r > b + 50) {
+                        const pixelIndex = i / 4;
+                        redX += pixelIndex % width;
+                        redY += Math.floor(pixelIndex / width);
+                        redCount++;
+                    }
+                }
+                
+                if (redCount > 50) {
+                    // Mittelwert berechnen
+                    const x = redX / redCount;
+                    const y = redY / redCount;
+                    
+                    if (this.drawing) {
+                        this.drawLine(this.lastX, this.lastY, x, y);
+                    }
+                    
+                    this.drawing = true;
+                    this.drawPoint(x, y);
+                    this.lastX = x;
+                    this.lastY = y;
+                } else {
+                    this.drawing = false;
+                }
+            }
+            
+            getVideoImageData() {
+                try {
+                    if (this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = this.video.videoWidth;
+                        tempCanvas.height = this.video.videoHeight;
+                        const tempCtx = tempCanvas.getContext('2d');
+                        
+                        // Spiegle das Video horizontal
+                        tempCtx.scale(-1, 1);
+                        tempCtx.drawImage(this.video, -tempCanvas.width, 0);
+                        
+                        return tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                    }
+                } catch (e) {
+                    console.error('ImageData Fehler:', e);
+                }
+                return null;
+            }
+            
+            drawLine(x1, y1, x2, y2) {
+                const color = document.getElementById('colorPicker').value;
+                const size = document.getElementById('brushSize').value;
+                
+                this.ctx.strokeStyle = color;
+                this.ctx.lineWidth = size;
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(x1, y1);
+                this.ctx.lineTo(x2, y2);
+                this.ctx.stroke();
+            }
+            
+            drawPoint(x, y) {
+                const color = document.getElementById('colorPicker').value;
+                const size = document.getElementById('brushSize').value;
+                
+                this.ctx.fillStyle = color;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+            
+            clear() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.updateStatus('Canvas gelöscht', false);
+            }
+            
+            download() {
+                const link = document.createElement('a');
+                link.href = this.canvas.toDataURL('image/png');
+                link.download = 'drawing-' + Date.now() + '.png';
+                link.click();
+                this.updateStatus('Bild heruntergeladen', false);
+            }
+            
+            stop() {
+                this.isActive = false;
+                this.drawing = false;
+                
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                }
+                
+                if (this.video.srcObject) {
+                    this.video.srcObject.getTracks().forEach(track => track.stop());
+                }
+                
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('clearBtn').disabled = true;
+                document.getElementById('downloadBtn').disabled = true;
+                
+                this.updateStatus('System gestoppt', false);
+            }
+            
+            updateStatus(message, type = false) {
+                const status = document.getElementById('status');
+                status.textContent = message;
+                status.className = 'status';
+                if (type) {
+                    status.classList.add(type);
+                }
+            }
+        }
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            window.drawing = new SimpleAirDrawing();
+            console.log('System bereit!');
+        });
+    </script>
+</body>
+</html>
